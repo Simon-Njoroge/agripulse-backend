@@ -177,8 +177,8 @@ async function bootstrap() {
 
   if (isDevelopment || isStaging) {
     const config = new DocumentBuilder()
-      .setTitle('NaksYetu API')
-      .setDescription('API documentation for NaksYetu')
+      .setTitle('AgriPulse API')
+      .setDescription('API documentation for AgriPulse')
       .setVersion('1.0')
       .addBearerAuth()
       .build();
@@ -189,7 +189,8 @@ async function bootstrap() {
   }
 
   await app.listen(process.env.PORT ?? 8000, '0.0.0.0', () => {
-    Logger.log(`Server is running on port ${process.env.PORT ?? 9000}`);
+    Logger.log(`Server is running on port ${process.env.PORT ?? 8000}`);
   });
 }
+
 bootstrap();
