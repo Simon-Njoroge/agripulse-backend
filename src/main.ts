@@ -7,11 +7,12 @@ import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { NextFunction } from 'express';
 import { NoSqlInjectionGuard } from './common/guards/nosql-injection.guard';
-import * as cookieParser from 'cookie-parser';
+import  cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { Request, Response } from 'express';
+
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

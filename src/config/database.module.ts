@@ -22,18 +22,10 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
             password: configService.getOrThrow<string>('DB_PASSWORD'),
             database: configService.getOrThrow<string>('DB_DATABASE'),
             entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-            // migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-            // migrationsTableName: 'migrations',
-            // migrationsRun: false,
-            synchronize: configService.get<boolean>('DB_SYNC', false),
-            dropSchema: configService.get<boolean>('DB_DROP_SCHEMA', false),
+            synchronize: configService.get<boolean>('DB_SYNC', true),
             logging: configService.get<boolean>('DB_LOGGING', false),
-            ssl:
-              configService.get<string>('DB_SSL', 'true') === 'true'
-                ? { rejectUnauthorized: false }
-                : undefined,
-            extra: {
-              connectionTimeoutMillis: 10000,
+            ssl: {
+              rejectUnauthorized: false,
             },
           };
           logger.log('Successfully loaded database config');

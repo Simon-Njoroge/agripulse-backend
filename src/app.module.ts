@@ -6,8 +6,8 @@ import { SessionsModule } from './sessions/sessions.module';
 import { FieldsModule } from './fields/fields.module';
 import { FieldUpdatesModule } from './field-updates/field-updates.module';
 import { DashboardModule } from './dashboard/dashboard.module';
-import { TryModule } from './try/try.module';
-
+import { EmailModule } from './common/utils/email/email.module';
+import { DatabaseModule } from './config/database.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -19,7 +19,8 @@ import { TryModule } from './try/try.module';
     FieldsModule,
     FieldUpdatesModule,
     DashboardModule,
-    TryModule,
+    DatabaseModule,
+    EmailModule,
   ],
   controllers: [],
   providers: [],

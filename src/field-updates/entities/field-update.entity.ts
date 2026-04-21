@@ -7,27 +7,32 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { Field, FieldStage } from '../../fields/entities/field.entity';
+import { Field } from '../../fields/entities/field.entity';
 import { User } from '../../users/entities/user.entity';
+
+enum FieldStage {
+  PLANTED = 'planted',
+  GROWING = 'growing',
+  READY = 'ready',
+  HARVESTED = 'harvested',
+}
 
 @Entity('field_updates')
 @Index(['fieldId'])
 @Index(['agentId'])
 @Index(['createdAt'])
 @Index(['newStage'])
-@Index(['fieldId', 'createdAt']) 
-@Index(['agentId', 'createdAt']) 
+@Index(['fieldId', 'createdAt'])
+@Index(['agentId', 'createdAt'])
 @Index(['fieldId', 'newStage'])
 export class FieldUpdate {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ type: 'uuid' })
-  @Index()
   fieldId!: string;
 
   @Column({ type: 'uuid' })
-  @Index()
   agentId!: string;
 
   @Column({
@@ -52,7 +57,7 @@ export class FieldUpdate {
     temperature?: number;
     humidity?: number;
     images?: string[];
-    healthScore?: number; 
+    healthScore?: number;
     pestDetected?: boolean;
   };
 
@@ -60,13 +65,12 @@ export class FieldUpdate {
   updateType!: 'stage_change' | 'note' | 'observation' | 'issue';
 
   @CreateDateColumn({ type: 'timestamptz' })
-  @Index()
   createdAt!: Date;
 
-  
-  @ManyToOne(() => Field, (field) => field.updates, { onDelete: 'CASCADE' })
+
+  @ManyToOne(() => Field, (field) => field.updates, { onDelete: 'CASCADE', lazy: true })
   @JoinColumn({ name: 'fieldId' })
-  field!: Field;
+  field!: Promise<Field> | Field;
 
   @ManyToOne(() => User, (user) => user.updates, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'agentId' })

@@ -69,11 +69,9 @@ export class Field {
     type: 'enum',
     enum: CropType,
   })
-  @Index()
   cropType!: CropType;
 
   @Column({ type: 'date' })
-  @Index()
   plantingDate!: Date;
 
   @Column({
@@ -81,7 +79,6 @@ export class Field {
     enum: FieldStage,
     default: FieldStage.PLANTED,
   })
-  @Index()
   currentStage!: FieldStage;
 
   @Column({
@@ -89,7 +86,6 @@ export class Field {
     enum: FieldStatus,
     nullable: true,
   })
-  @Index()
   computedStatus!: FieldStatus;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
@@ -118,7 +114,6 @@ export class Field {
   estimatedYield!: number; 
 
   @Column({ type: 'uuid' })
-  @Index()
   assignedAgentId!: string;
 
   @Column({ type: 'timestamp', nullable: true })
@@ -136,7 +131,6 @@ export class Field {
   };
 
   @CreateDateColumn({ type: 'timestamptz' })
-  @Index()
   createdAt!: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' })
@@ -147,6 +141,6 @@ export class Field {
   @JoinColumn({ name: 'assignedAgentId' })
   assignedAgent!: User;
 
-  @OneToMany(() => FieldUpdate, (update: any) => update.field, { cascade: true })
+  @OneToMany(() => FieldUpdate, (update) => update.field, { cascade: true })
   updates!: FieldUpdate[];
 }
