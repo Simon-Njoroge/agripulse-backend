@@ -1,0 +1,23 @@
+@baseUrl=http://localhost:8000/api/v1
+
+###
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+  "name": "Simon Njoroge",
+  "password": "password123",
+  "email": "mukirisimon22@gmail.com",
+  "role": "admin"
+}
+
+###
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "mukirisimon22@gmail.com",
+  "password": "password123",
+  "forceLogin": true
+}
+
