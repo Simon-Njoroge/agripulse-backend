@@ -1,26 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { CreateDashboardDto } from './dto/create-dashboard.dto';
-import { UpdateDashboardDto } from './dto/update-dashboard.dto';
+import { AdminDashboardService } from './admin-dashboard.service';
+// import { AgentDashboardService } from './services/agent-dashboard.service';
+import { AdminDashboardResponseDto } from './dto/dashboard.dto';
 
 @Injectable()
 export class DashboardService {
-  create(createDashboardDto: CreateDashboardDto) {
-    return 'This action adds a new dashboard';
+  constructor(
+    private readonly adminDashboardService: AdminDashboardService,
+    // private readonly agentDashboardService: AgentDashboardService,
+  ) {}
+
+  async getAdminDashboard(): Promise<AdminDashboardResponseDto> {
+    return this.adminDashboardService.getAdminDashboard();
   }
 
-  findAll() {
-    return `This action returns all dashboard`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} dashboard`;
-  }
-
-  update(id: number, updateDashboardDto: UpdateDashboardDto) {
-    return `This action updates a #${id} dashboard`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} dashboard`;
-  }
+//   async getAgentDashboard(agentId: string) {
+//     return this.agentDashboardService.getAgentDashboard(agentId);
+//   }
 }

@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { DashboardService } from './dashboard.service';
+import { AdminDashboardService } from './admin-dashboard.service';
 import { DashboardController } from './dashboard.controller';
+import { Admin } from 'typeorm';
 
 @Module({
   controllers: [DashboardController],
-  providers: [DashboardService],
+  providers: [AdminDashboardService],
 })
 export class DashboardModule {}
