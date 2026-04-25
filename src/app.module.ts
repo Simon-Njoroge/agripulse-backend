@@ -8,6 +8,8 @@ import { FieldUpdatesModule } from './field-updates/field-updates.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { EmailModule } from './common/utils/email/email.module';
 import { DatabaseModule } from './config/database.module';
+import { GlobalCacheModule } from './cache/cache.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -21,6 +23,7 @@ import { DatabaseModule } from './config/database.module';
     DashboardModule,
     DatabaseModule,
     EmailModule,
+    GlobalCacheModule,
   ],
   controllers: [],
   providers: [],

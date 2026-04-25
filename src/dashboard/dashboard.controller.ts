@@ -42,19 +42,19 @@ export class DashboardController {
     return result;
   }
 
-//   @Get('agent')
-//   @Roles(UserRole.AGENT)
-//   @ApiOperation({ summary: 'Get agent dashboard with personal analytics' })
-//   @ApiResponse({
-//     status: 200,
-//     description: 'Agent dashboard data retrieved successfully',
-//   })
-//   @ApiResponse({
-//     status: 403,
-//     description: 'User is not authorized as agent',
-//   })
-//   async getAgentDashboard(@Req() req: RequestWithUser) {
-//     const result = await this.dashboardService.getAgentDashboard(req.user.sub);
-//     return result;
-//   }
+  @Get('agent')
+  @Roles(UserRole.AGENT)
+  @ApiOperation({ summary: 'Get agent dashboard with personal analytics' })
+  @ApiResponse({
+    status: 200,
+    description: 'Agent dashboard data retrieved successfully',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'User is not authorized as agent',
+  })
+  async getAgentDashboard(@Req() req: RequestWithUser) {
+    const result = await this.dashboardService.getAgentDashboard((req as any).user.sub);
+    return result;
+  }
 }
