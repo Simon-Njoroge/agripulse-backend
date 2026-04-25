@@ -223,10 +223,10 @@ export class AgentDashboardResponseDto {
   @ApiProperty() @IsNumber() atRiskFields!: number;
   @ApiProperty() @IsNumber() completedFields!: number;
 
-  @ApiProperty({ type: AgentHeaderStatsDto })
+  @ApiProperty({ type: StageDistributionDto })
   @ValidateNested()
-  @Type(() => AgentHeaderStatsDto)
-  myHeaderStats!: AgentHeaderStatsDto;
+  @Type(() => StageDistributionDto)
+  myStageDistribution!: StageDistributionDto;
 
   @ApiProperty({ type: [RecentUpdateDto] })
   @IsArray()

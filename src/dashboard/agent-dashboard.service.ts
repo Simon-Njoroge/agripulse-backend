@@ -288,7 +288,7 @@ export class AgentDashboardService {
       averageResponseTime: Math.round(averageResponseTime * 10) / 10,
       completionRate: Math.round(completionRate),
       performanceScore,
-      rankAmongAgents: rank,
+      rankAmongAgents: rank ?? undefined,
     };
   }
 
@@ -393,7 +393,7 @@ export class AgentDashboardService {
     return Math.min(Math.round(completionScore + weeklyActivityScore + totalActivityScore + responseTimeScore), 100);
   }
 
-  private async getAgentRank(agentId: string, myCompletionRate: number): Promise<number> {
+  private async getAgentRank(agentId: string, myCompletionRate: number): Promise<number | null> {
     const agents = await this.dataSource
       .createQueryBuilder()
       .select([
