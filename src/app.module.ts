@@ -9,6 +9,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { EmailModule } from './common/utils/email/email.module';
 import { DatabaseModule } from './config/database.module';
 import { GlobalCacheModule } from './cache/cache.module';
+import { AtStrategy } from './common/strategies/at.strategy';
 
 @Module({
   imports: [
@@ -26,6 +27,6 @@ import { GlobalCacheModule } from './cache/cache.module';
     GlobalCacheModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [AtStrategy],
 })
 export class AppModule {}

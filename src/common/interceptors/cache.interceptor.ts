@@ -12,7 +12,7 @@ import { Request, Response } from 'express';
 @Injectable()
 export class CacheHeaderInterceptor implements NestInterceptor {
   private readonly logger = new Logger(CacheHeaderInterceptor.name);
-  private readonly cacheThreshold = 15; 
+  private readonly cacheThreshold = 15;
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const ctx = context.switchToHttp();
@@ -39,7 +39,6 @@ export class CacheHeaderInterceptor implements NestInterceptor {
         response.setHeader('X-Request-Method', request.method);
         response.setHeader('X-Request-Path', request.url);
         response.setHeader('X-Cache-Timestamp', new Date().toISOString());
-
 
         if (isGetRequest) {
           const logMessage = `${request.method} ${request.url} - Cache: ${cacheStatus} - ${responseTime}ms`;

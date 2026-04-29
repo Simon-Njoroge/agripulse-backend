@@ -7,12 +7,11 @@ import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { NextFunction } from 'express';
 import { NoSqlInjectionGuard } from './common/guards/nosql-injection.guard';
-import  cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { Request, Response } from 'express';
-
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -30,7 +29,9 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:3000',
+      'http://localhost:3001',
       'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
       'https://dev-agripulse.netlify.app',
     ],
     credentials: true,
@@ -107,7 +108,6 @@ async function bootstrap() {
   });
 
   app.use(cookieParser());
-
 
   app.useWebSocketAdapter(new IoAdapter(app));
 

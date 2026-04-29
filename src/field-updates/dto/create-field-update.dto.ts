@@ -1,4 +1,14 @@
-import { IsString, IsUUID, IsEnum, IsOptional, IsObject, IsArray, IsNumber, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsUUID,
+  IsEnum,
+  IsOptional,
+  IsObject,
+  IsArray,
+  IsNumber,
+  Min,
+  Max,
+} from 'class-validator';
 import { FieldStage } from '../../fields/entities/field.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 

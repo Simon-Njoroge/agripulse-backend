@@ -56,8 +56,8 @@ export enum SoilType {
 @Index(['plantingDate'])
 @Index(['createdAt'])
 @Index(['assignedAgentId', 'computedStatus'])
-@Index(['currentStage', 'computedStatus']) 
-@Index(['plantingDate', 'computedStatus']) 
+@Index(['currentStage', 'computedStatus'])
+@Index(['plantingDate', 'computedStatus'])
 export class Field {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -111,7 +111,7 @@ export class Field {
   soilType!: SoilType;
 
   @Column({ type: 'int', nullable: true })
-  estimatedYield!: number; 
+  estimatedYield!: number;
 
   @Column({ type: 'uuid' })
   assignedAgentId!: string;
@@ -136,8 +136,9 @@ export class Field {
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
 
-  
-  @ManyToOne(() => User, (user) => user.assignedFields, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => User, (user) => user.assignedFields, {
+    onDelete: 'RESTRICT',
+  })
   @JoinColumn({ name: 'assignedAgentId' })
   assignedAgent!: User;
 

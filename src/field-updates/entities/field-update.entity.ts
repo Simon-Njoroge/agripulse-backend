@@ -67,8 +67,10 @@ export class FieldUpdate {
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
-
-  @ManyToOne(() => Field, (field) => field.updates, { onDelete: 'CASCADE', lazy: true })
+  @ManyToOne(() => Field, (field) => field.updates, {
+    onDelete: 'CASCADE',
+    lazy: true,
+  })
   @JoinColumn({ name: 'fieldId' })
   field!: Promise<Field> | Field;
 

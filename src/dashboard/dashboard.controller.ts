@@ -1,6 +1,18 @@
-import { Controller, Get, Req, UseGuards, UseInterceptors, ClassSerializerInterceptor } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Req,
+  UseGuards,
+  UseInterceptors,
+  ClassSerializerInterceptor,
+} from '@nestjs/common';
 import type { Request } from 'express';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { Roles } from 'src/common/decorators/role.decorator';
 import { UserRole } from '../users/entities/user.entity';
@@ -37,7 +49,6 @@ export class DashboardController {
     description: 'User is not authorized as admin',
   })
   async getAdminDashboard(@Req() req: RequestWithUser) {
-   
     const result = await this.dashboardService.getAdminDashboard();
     return result;
   }
@@ -54,7 +65,9 @@ export class DashboardController {
     description: 'User is not authorized as agent',
   })
   async getAgentDashboard(@Req() req: RequestWithUser) {
-    const result = await this.dashboardService.getAgentDashboard((req as any).user.sub);
+    const result = await this.dashboardService.getAgentDashboard(
+      (req as any).user.sub,
+    );
     return result;
   }
 }

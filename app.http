@@ -1,4 +1,5 @@
 @baseUrl=http://localhost:8000/api/v1
+@access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4OGM3ZTI2OS0xMjdlLTQ0YWMtOTNmOS0wNGZmY2MyYzUwYTAiLCJlbWFpbCI6Im11a2lyaS4xNjAzMEBzdHVkZW50cy5reXUuYWMua2UiLCJyb2xlIjoiYWdlbnQiLCJpYXQiOjE3NzcxNTE1ODQsImV4cCI6MTc3NzE1MjE4OH0.J-Grv6-fsFGqrI_ZMlH71oBekeS6AAaIrsopKHQCE9o
 
 ###
 POST {{baseUrl}}/auth/signup
@@ -7,8 +8,7 @@ Content-Type: application/json
 {
   "name": "Simon Njoroge",
   "password": "password123",
-  "email": "mukirisimon22@gmail.com",
-  "role": "admin"
+  "email": "mukiri.16030@students.kyu.ac.ke"
 }
 
 ###
@@ -16,8 +16,20 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "mukirisimon22@gmail.com",
+  "email": "mukiri.16030@students.kyu.ac.ke",
   "password": "password123",
   "forceLogin": true
 }
 
+###
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{access_token}}
+
+
+###
+GET {{baseUrl}}/dashboard/admin
+Authorization: Bearer {{access_token}}
+
+###
+GET {{baseUrl}}/dashboard/agent
+Authorization: Bearer {{access_token}}

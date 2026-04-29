@@ -57,7 +57,6 @@ export class User {
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
 
-  
   @OneToMany('Session', 'user')
   sessions!: any[];
 

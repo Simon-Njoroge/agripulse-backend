@@ -2,7 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { CacheService } from '../cache/cache.service';
-import { Field, FieldStage, FieldStatus, CropType } from '../fields/entities/field.entity';
+import {
+  Field,
+  FieldStage,
+  FieldStatus,
+  CropType,
+} from '../fields/entities/field.entity';
 import { UserRole } from '../users/entities/user.entity';
 import {
   AdminDashboardResponseDto,
@@ -15,7 +20,7 @@ import {
 @Injectable()
 export class AdminDashboardService {
   private readonly logger = new Logger(AdminDashboardService.name);
-  private readonly CACHE_TTL = 300; 
+  private readonly CACHE_TTL = 300;
   private readonly CACHE_PREFIX = 'admin_dashboard';
 
   constructor(
@@ -27,7 +32,6 @@ export class AdminDashboardService {
   async getAdminDashboard(): Promise<AdminDashboardResponseDto> {
     const cacheKey = `${this.CACHE_PREFIX}_data`;
 
-    
     const cachedData = await this.cacheService.get(cacheKey);
     if (cachedData) {
       this.logger.debug('Admin dashboard cache hit');
@@ -36,7 +40,6 @@ export class AdminDashboardService {
 
     this.logger.debug('Admin dashboard cache miss, fetching from database');
 
-  
     const [
       headerStats,
       cropDistribution,
@@ -66,14 +69,12 @@ export class AdminDashboardService {
       weeklyTrend,
     };
 
-   
     await this.cacheService.set(cacheKey, dashboardData, this.CACHE_TTL);
     this.logger.debug('Admin dashboard cached successfully');
 
     return dashboardData;
   }
 
- 
   private async getHeaderStats() {
     const result = await this.dataSource
       .createQueryBuilder()
@@ -99,7 +100,6 @@ export class AdminDashboardService {
     };
   }
 
-
   private async getCropDistribution() {
     const results = await this.dataSource
       .createQueryBuilder()
@@ -109,7 +109,6 @@ export class AdminDashboardService {
       .groupBy('field."cropType"')
       .getRawMany();
 
-   
     const distribution = {
       [CropType.CORN]: 0,
       [CropType.WHEAT]: 0,
@@ -126,7 +125,6 @@ export class AdminDashboardService {
     return distribution;
   }
 
- 
   private async getStageDistribution() {
     const results = await this.dataSource
       .createQueryBuilder()
@@ -150,61 +148,73 @@ export class AdminDashboardService {
     return distribution;
   }
 
-  
   private async getAgentPerformance(): Promise<AgentPerformanceDto[]> {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
+    try {
+      const query = `
+      SELECT 
+        u.id as "agentId",
+        u.name as "agentName",
+        COALESCE(COUNT(DISTINCT f.id), 0) as "fieldsAssigned",
+        COALESCE(COUNT(DISTINCT CASE WHEN f."computedStatus" = $1 THEN f.id END), 0) as "completedFields",
+        COALESCE(COUNT(DISTINCT upd.id), 0) as "totalUpdates",
+        COALESCE(COUNT(DISTINCT CASE WHEN upd."createdAt" > $2 THEN upd.id END), 0) as "updatesThisWeek"
+      FROM users u
+      LEFT JOIN fields f ON f."assignedAgentId" = u.id
+      LEFT JOIN field_updates upd ON upd."fieldId" = f.id
+      WHERE u.role = $3 AND u."isActive" = $4
+      GROUP BY u.id, u.name
+      ORDER BY u.name
+    `;
 
-    const agents = await this.dataSource
-      .createQueryBuilder()
-      .select([
-        'user.id as "agentId"',
-        'user.name as "agentName"',
-        'COUNT(DISTINCT field.id) as "fieldsAssigned"',
-        'COUNT(DISTINCT CASE WHEN field."computedStatus" = :completed THEN field.id END) as "completedFields"',
-        'COUNT(DISTINCT update.id) as "totalUpdates"',
-        'COUNT(DISTINCT CASE WHEN update."createdAt" > :oneWeekAgo THEN update.id END) as "updatesThisWeek"',
-      ])
-      .from('users', 'user')
-      .leftJoin('fields', 'field', 'field."assignedAgentId" = user.id')
-      .leftJoin('field_updates', 'update', 'update."fieldId" = field.id')
-      .where('user.role = :role', { role: UserRole.AGENT })
-      .andWhere('user."isActive" = :isActive', { isActive: true })
-      .groupBy('user.id, user.name')
-      .setParameters({
-        completed: FieldStatus.COMPLETED,
+      const agents = await this.dataSource.query(query, [
+        FieldStatus.COMPLETED,
         oneWeekAgo,
-        role: UserRole.AGENT,
-        isActive: true,
-      })
-      .getRawMany();
+        UserRole.AGENT,
+        true,
+      ]);
 
-    return agents.map((agent) => {
-      const fieldsAssigned = parseInt(agent.fieldsAssigned) || 0;
-      const completedFields = parseInt(agent.completedFields) || 0;
-      const totalUpdates = parseInt(agent.totalUpdates) || 0;
-      const updatesThisWeek = parseInt(agent.updatesThisWeek) || 0;
+      if (!agents || agents.length === 0) {
+        this.logger.debug('No agents found in database');
+        return [];
+      }
 
-      const completionRate = fieldsAssigned > 0 ? (completedFields / fieldsAssigned) * 100 : 0;
-      const performanceScore = this.calculatePerformanceScore(
-        completionRate,
-        updatesThisWeek,
-        totalUpdates,
+      return agents.map((agent) => {
+        const fieldsAssigned = parseInt(agent.fieldsAssigned) || 0;
+        const completedFields = parseInt(agent.completedFields) || 0;
+        const totalUpdates = parseInt(agent.totalUpdates) || 0;
+        const updatesThisWeek = parseInt(agent.updatesThisWeek) || 0;
+
+        const completionRate =
+          fieldsAssigned > 0 ? (completedFields / fieldsAssigned) * 100 : 0;
+
+        const performanceScore = this.calculatePerformanceScore(
+          completionRate,
+          updatesThisWeek,
+          totalUpdates,
+        );
+
+        return {
+          agentId: agent.agentId,
+          agentName: agent.agentName,
+          fieldsAssigned,
+          updatesThisWeek,
+          completionRate: Math.round(completionRate),
+          performanceScore,
+        };
+      });
+    } catch (error: any) {
+      this.logger.error(`Failed to get agent performance: ${error.message}`);
+      this.logger.error(
+        `Error details: ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`,
       );
 
-      return {
-        agentId: agent.agentId,
-        agentName: agent.agentName,
-        fieldsAssigned,
-        updatesThisWeek,
-        completionRate: Math.round(completionRate),
-        performanceScore,
-      };
-    });
+      return [];
+    }
   }
 
- 
   private async getRecentActivity(): Promise<RecentActivityDto[]> {
     const activities = await this.dataSource
       .createQueryBuilder()
@@ -228,12 +238,15 @@ export class AdminDashboardService {
       id: activity.id,
       fieldName: activity.fieldName,
       agentName: activity.agentName,
-      action: this.formatActivityAction(activity.previousStage, activity.newStage, activity.notes),
+      action: this.formatActivityAction(
+        activity.previousStage,
+        activity.newStage,
+        activity.notes,
+      ),
       timestamp: activity.timestamp,
     }));
   }
 
-  
   private async getAtRiskFields(): Promise<AtRiskFieldDto[]> {
     const atRiskFields = await this.dataSource
       .createQueryBuilder()
@@ -252,7 +265,9 @@ export class AdminDashboardService {
       ])
       .from('fields', 'field')
       .leftJoin('users', 'agent', 'agent.id = field."assignedAgentId"')
-      .where('field."computedStatus" = :status', { status: FieldStatus.AT_RISK })
+      .where('field."computedStatus" = :status', {
+        status: FieldStatus.AT_RISK,
+      })
       .getRawMany();
 
     return atRiskFields.map((field) => ({
@@ -269,12 +284,10 @@ export class AdminDashboardService {
     }));
   }
 
-  
   private async getWeeklyTrend(): Promise<WeeklyTrendDto> {
     const labels: string[] = [];
     const dates: Date[] = [];
 
-   
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
@@ -283,7 +296,6 @@ export class AdminDashboardService {
       labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
     }
 
-   
     const updatesData = await this.dataSource
       .createQueryBuilder()
       .select('DATE(update."createdAt") as date')
@@ -293,7 +305,6 @@ export class AdminDashboardService {
       .groupBy('DATE(update."createdAt")')
       .getRawMany();
 
-   
     const fieldsData = await this.dataSource
       .createQueryBuilder()
       .select('DATE(field."createdAt") as date')
@@ -303,7 +314,6 @@ export class AdminDashboardService {
       .groupBy('DATE(field."createdAt")')
       .getRawMany();
 
-   
     const updatesMap = new Map();
     updatesData.forEach((item) => {
       const dateKey = new Date(item.date).toISOString().split('T')[0];
@@ -316,7 +326,6 @@ export class AdminDashboardService {
       fieldsMap.set(dateKey, parseInt(item.count));
     });
 
-    
     const updatesCount: number[] = [];
     const newFieldsCount: number[] = [];
 
@@ -329,17 +338,17 @@ export class AdminDashboardService {
     return { labels, updatesCount, newFieldsCount };
   }
 
-  
   private calculatePerformanceScore(
     completionRate: number,
     updatesThisWeek: number,
     totalUpdates: number,
   ): number {
-
     const completionScore = completionRate * 0.5;
     const recentActivityScore = Math.min(updatesThisWeek * 5, 30);
     const totalActivityScore = Math.min(totalUpdates * 2, 20);
-    return Math.round(completionScore + recentActivityScore + totalActivityScore);
+    return Math.round(
+      completionScore + recentActivityScore + totalActivityScore,
+    );
   }
 
   private formatActivityAction(

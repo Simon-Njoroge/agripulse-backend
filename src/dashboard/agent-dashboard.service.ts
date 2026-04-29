@@ -16,7 +16,7 @@ import {
 @Injectable()
 export class AgentDashboardService {
   private readonly logger = new Logger(AgentDashboardService.name);
-  private readonly CACHE_TTL = 180; 
+  private readonly CACHE_TTL = 180;
   private readonly CACHE_PREFIX = 'agent_dashboard';
 
   constructor(
@@ -28,30 +28,37 @@ export class AgentDashboardService {
   async getAgentDashboard(agentId: string): Promise<AgentDashboardResponseDto> {
     const cacheKey = `${this.CACHE_PREFIX}_${agentId}`;
 
-   
     const cachedData = await this.cacheService.get(cacheKey);
     if (cachedData) {
       this.logger.debug(`Agent dashboard cache hit for agent: ${agentId}`);
       return cachedData;
     }
 
-    this.logger.debug(`Agent dashboard cache miss for agent: ${agentId}, fetching from database`);
+    this.logger.debug(
+      `Agent dashboard cache miss for agent: ${agentId}, fetching from database`,
+    );
 
-   
-    const agent = await this.dataSource
-      .createQueryBuilder()
-      .select(['user.id', 'user.name', 'user.email'])
-      .from('users', 'user')
-      .where('user.id = :agentId', { agentId })
-      .andWhere('user.role = :role', { role: UserRole.AGENT })
-      .andWhere('user."isActive" = :isActive', { isActive: true })
-      .getRawOne();
+    const agentQuery = `
+    SELECT 
+      u.id as "agentId",
+      u.name as "agentName",
+      u.email as "agentEmail"
+    FROM users u
+    WHERE u.id = $1 AND u.role = $2 AND u."isActive" = $3
+  `;
+
+    const agents = await this.dataSource.query(agentQuery, [
+      agentId,
+      UserRole.AGENT,
+      true,
+    ]);
+
+    const agent = agents[0];
 
     if (!agent) {
       throw new NotFoundException(`Agent with ID ${agentId} not found`);
     }
 
-    
     const [
       headerStats,
       stageDistribution,
@@ -80,14 +87,14 @@ export class AgentDashboardService {
       weeklyActivity,
     };
 
-    
     await this.cacheService.set(cacheKey, dashboardData, this.CACHE_TTL);
-    this.logger.debug(`Agent dashboard cached successfully for agent: ${agentId}`);
+    this.logger.debug(
+      `Agent dashboard cached successfully for agent: ${agentId}`,
+    );
 
     return dashboardData;
   }
 
-  
   private async getHeaderStats(agentId: string) {
     const result = await this.dataSource
       .createQueryBuilder()
@@ -114,7 +121,6 @@ export class AgentDashboardService {
     };
   }
 
-  
   private async getStageDistribution(agentId: string) {
     const results = await this.dataSource
       .createQueryBuilder()
@@ -139,7 +145,6 @@ export class AgentDashboardService {
     return distribution;
   }
 
-  
   private async getRecentUpdates(agentId: string): Promise<RecentUpdateDto[]> {
     const updates = await this.dataSource
       .createQueryBuilder()
@@ -170,8 +175,9 @@ export class AgentDashboardService {
     }));
   }
 
- 
-  private async getAtRiskFields(agentId: string): Promise<AgentAtRiskFieldDto[]> {
+  private async getAtRiskFields(
+    agentId: string,
+  ): Promise<AgentAtRiskFieldDto[]> {
     const atRiskFields = await this.dataSource
       .createQueryBuilder()
       .select([
@@ -188,7 +194,9 @@ export class AgentDashboardService {
       ])
       .from('fields', 'field')
       .where('field."assignedAgentId" = :agentId', { agentId })
-      .andWhere('field."computedStatus" = :status', { status: FieldStatus.AT_RISK })
+      .andWhere('field."computedStatus" = :status', {
+        status: FieldStatus.AT_RISK,
+      })
       .getRawMany();
 
     return atRiskFields.map((field) => ({
@@ -206,15 +214,15 @@ export class AgentDashboardService {
     }));
   }
 
-  
-  private async getPerformanceMetrics(agentId: string): Promise<AgentPerformanceMetricsDto> {
+  private async getPerformanceMetrics(
+    agentId: string,
+  ): Promise<AgentPerformanceMetricsDto> {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
     const oneMonthAgo = new Date();
     oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
 
-   
     const fieldStats = await this.dataSource
       .createQueryBuilder()
       .select([
@@ -226,7 +234,6 @@ export class AgentDashboardService {
       .setParameter('completed', FieldStatus.COMPLETED)
       .getRawOne();
 
-   
     const updateStats = await this.dataSource
       .createQueryBuilder()
       .select([
@@ -242,7 +249,6 @@ export class AgentDashboardService {
       })
       .getRawOne();
 
-   
     const responseTimeData = await this.dataSource
       .createQueryBuilder()
       .select([
@@ -266,7 +272,8 @@ export class AgentDashboardService {
 
     const totalFields = parseInt(fieldStats.totalFields) || 0;
     const completedFields = parseInt(fieldStats.completedFields) || 0;
-    const completionRate = totalFields > 0 ? (completedFields / totalFields) * 100 : 0;
+    const completionRate =
+      totalFields > 0 ? (completedFields / totalFields) * 100 : 0;
 
     const totalUpdates = parseInt(updateStats.totalUpdates) || 0;
     const updatesThisWeek = parseInt(updateStats.updatesThisWeek) || 0;
@@ -292,7 +299,6 @@ export class AgentDashboardService {
     };
   }
 
- 
   private async getPendingTasks(agentId: string): Promise<PendingTaskDto[]> {
     const fieldsNeedingAttention = await this.dataSource
       .createQueryBuilder()
@@ -307,10 +313,15 @@ export class AgentDashboardService {
       ])
       .from('fields', 'field')
       .where('field."assignedAgentId" = :agentId', { agentId })
-      .andWhere('field."computedStatus" != :completed', { completed: FieldStatus.COMPLETED })
-      .andWhere('field."lastUpdateAt" IS NULL OR field."lastUpdateAt" < :threshold', {
-        threshold: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days
+      .andWhere('field."computedStatus" != :completed', {
+        completed: FieldStatus.COMPLETED,
       })
+      .andWhere(
+        'field."lastUpdateAt" IS NULL OR field."lastUpdateAt" < :threshold',
+        {
+          threshold: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days
+        },
+      )
       .orderBy('field."lastUpdateAt"', 'ASC')
       .limit(5)
       .getRawMany();
@@ -322,17 +333,18 @@ export class AgentDashboardService {
         fieldName: field.fieldName,
         currentStage: field.currentStage,
         daysSinceLastUpdate,
-        suggestedAction: this.getSuggestedAction(field.currentStage, daysSinceLastUpdate),
+        suggestedAction: this.getSuggestedAction(
+          field.currentStage,
+          daysSinceLastUpdate,
+        ),
       };
     });
   }
 
-  
   private async getWeeklyActivity(agentId: string): Promise<WeeklyActivityDto> {
     const labels: string[] = [];
     const dates: Date[] = [];
 
-   
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
@@ -341,7 +353,6 @@ export class AgentDashboardService {
       labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
     }
 
-    
     const updatesData = await this.dataSource
       .createQueryBuilder()
       .select('DATE(update."createdAt") as date')
@@ -352,14 +363,12 @@ export class AgentDashboardService {
       .groupBy('DATE(update."createdAt")')
       .getRawMany();
 
-    
     const updatesMap = new Map();
     updatesData.forEach((item) => {
       const dateKey = new Date(item.date).toISOString().split('T')[0];
       updatesMap.set(dateKey, parseInt(item.count));
     });
 
-  
     const myUpdates: number[] = [];
     for (const date of dates) {
       const dateKey = date.toISOString().split('T')[0];
@@ -378,7 +387,7 @@ export class AgentDashboardService {
     const completionScore = (completionRate / 100) * 40;
     const weeklyActivityScore = Math.min(updatesThisWeek * 3, 30);
     const totalActivityScore = Math.min(totalUpdates, 30) * (20 / 30);
-    
+
     let responseTimeScore = 10;
     if (averageResponseTime > 0 && averageResponseTime <= 2) {
       responseTimeScore = 10; // Excellent
@@ -390,39 +399,55 @@ export class AgentDashboardService {
       responseTimeScore = 1; // Poor
     }
 
-    return Math.min(Math.round(completionScore + weeklyActivityScore + totalActivityScore + responseTimeScore), 100);
+    return Math.min(
+      Math.round(
+        completionScore +
+          weeklyActivityScore +
+          totalActivityScore +
+          responseTimeScore,
+      ),
+      100,
+    );
   }
 
-  private async getAgentRank(agentId: string, myCompletionRate: number): Promise<number | null> {
-    const agents = await this.dataSource
-      .createQueryBuilder()
-      .select([
-        'user.id as "agentId"',
-        'COUNT(DISTINCT field.id) as "totalFields"',
-        'SUM(CASE WHEN field."computedStatus" = :completed THEN 1 ELSE 0 END) as "completedFields"',
-      ])
-      .from('users', 'user')
-      .leftJoin('fields', 'field', 'field."assignedAgentId" = user.id')
-      .where('user.role = :role', { role: UserRole.AGENT })
-      .andWhere('user."isActive" = :isActive', { isActive: true })
-      .groupBy('user.id')
-      .setParameter('completed', FieldStatus.COMPLETED)
-      .getRawMany();
+  private async getAgentRank(
+    agentId: string,
+    myCompletionRate: number,
+  ): Promise<number | null> {
+    const query = `
+    SELECT 
+      u.id as "agentId",
+      COUNT(DISTINCT f.id) as "totalFields",
+      SUM(CASE WHEN f."computedStatus" = $1 THEN 1 ELSE 0 END) as "completedFields"
+    FROM users u
+    LEFT JOIN fields f ON f."assignedAgentId" = u.id
+    WHERE u.role = $2 AND u."isActive" = $3
+    GROUP BY u.id
+  `;
+
+    const agents = await this.dataSource.query(query, [
+      FieldStatus.COMPLETED,
+      UserRole.AGENT,
+      true,
+    ]);
+
+    if (!agents || agents.length === 0) {
+      return null;
+    }
 
     const agentsWithRates = agents.map((agent) => {
       const totalFields = parseInt(agent.totalFields) || 0;
       const completedFields = parseInt(agent.completedFields) || 0;
-      const completionRate = totalFields > 0 ? (completedFields / totalFields) * 100 : 0;
+      const completionRate =
+        totalFields > 0 ? (completedFields / totalFields) * 100 : 0;
       return { agentId: agent.agentId, completionRate };
     });
 
-    
     agentsWithRates.sort((a, b) => b.completionRate - a.completionRate);
 
     const rank = agentsWithRates.findIndex((a) => a.agentId === agentId) + 1;
     return rank > 0 ? rank : null;
   }
-
   private determineRiskReason(
     currentStage: string,
     daysSinceLastUpdate: number,
@@ -443,7 +468,10 @@ export class AgentDashboardService {
     return `⚠️ Field requires attention`;
   }
 
-  private getSuggestedAction(currentStage: string, daysSinceLastUpdate: number): string {
+  private getSuggestedAction(
+    currentStage: string,
+    daysSinceLastUpdate: number,
+  ): string {
     if (daysSinceLastUpdate > 14) {
       return 'Urgent: Schedule immediate field inspection';
     }

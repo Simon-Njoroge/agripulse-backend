@@ -31,8 +31,9 @@ import { ConfigModule } from '@nestjs/config/dist/config.module';
         };
       },
     }),
-    TypeOrmModule.forFeature([User, Session])],
+    TypeOrmModule.forFeature([User, Session]),
+  ],
   controllers: [AuthController],
   providers: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

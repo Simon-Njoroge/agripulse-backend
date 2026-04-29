@@ -1,16 +1,31 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { FieldUpdate } from './entities/field-update.entity';
-import { Field, FieldStage, FieldStatus } from '../fields/entities/field.entity';
+import {
+  Field,
+  FieldStage,
+  FieldStatus,
+} from '../fields/entities/field.entity';
 import { UserRole } from '../users/entities/user.entity';
-import { CreateFieldUpdateDto, AddNoteDto, FilterUpdatesDto, BulkUpdateDto } from './dto/create-field-update.dto';
+import {
+  CreateFieldUpdateDto,
+  AddNoteDto,
+  FilterUpdatesDto,
+  BulkUpdateDto,
+} from './dto/create-field-update.dto';
 import { CacheService } from '../cache/cache.service';
 
 @Injectable()
 export class FieldUpdatesService {
   private readonly logger = new Logger(FieldUpdatesService.name);
-  private readonly CACHE_TTL = 60; 
+  private readonly CACHE_TTL = 60;
 
   constructor(
     @InjectDataSource()
@@ -18,11 +33,9 @@ export class FieldUpdatesService {
     private readonly cacheService: CacheService,
   ) {}
 
-  
   async createUpdate(createDto: CreateFieldUpdateDto, agentId: string) {
     const { fieldId, newStage, notes, metadata } = createDto;
 
-  
     const field = await this.dataSource
       .createQueryBuilder()
       .select([
@@ -41,15 +54,18 @@ export class FieldUpdatesService {
       throw new NotFoundException('Field not found');
     }
 
-    
     if (field.assignedAgentId !== agentId) {
       throw new ForbiddenException('You are not assigned to this field');
     }
 
     const previousStage = field.currentStage;
 
-    
-    const stageOrder = [FieldStage.PLANTED, FieldStage.GROWING, FieldStage.READY, FieldStage.HARVESTED];
+    const stageOrder = [
+      FieldStage.PLANTED,
+      FieldStage.GROWING,
+      FieldStage.READY,
+      FieldStage.HARVESTED,
+    ];
     const currentIndex = stageOrder.indexOf(previousStage);
     const newIndex = stageOrder.indexOf(newStage);
 
@@ -57,17 +73,17 @@ export class FieldUpdatesService {
       throw new BadRequestException('Cannot move backward to a previous stage');
     }
 
-  
-    const daysSincePlanting = this.getDaysDifference(field.plantingDate, new Date());
+    const daysSincePlanting = this.getDaysDifference(
+      field.plantingDate,
+      new Date(),
+    );
     const computedStatus = this.calculateStatus(newStage, daysSincePlanting);
 
-    
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      
       await queryRunner.manager
         .createQueryBuilder()
         .update(Field)
@@ -79,7 +95,6 @@ export class FieldUpdatesService {
         .where('id = :fieldId', { fieldId })
         .execute();
 
-      
       const updateResult = await queryRunner.manager
         .createQueryBuilder()
         .insert()
@@ -98,7 +113,6 @@ export class FieldUpdatesService {
 
       await queryRunner.commitTransaction();
 
-      
       await this.clearRelatedCache(fieldId, agentId);
 
       return {
@@ -112,7 +126,7 @@ export class FieldUpdatesService {
           computedStatus,
         },
       };
-    } catch (error:any) {
+    } catch (error: any) {
       await queryRunner.rollbackTransaction();
       this.logger.error(`Failed to create update: ${error.message}`);
       throw error;
@@ -121,14 +135,17 @@ export class FieldUpdatesService {
     }
   }
 
-  
   async addNote(addNoteDto: AddNoteDto, agentId: string) {
     const { fieldId, notes, metadata } = addNoteDto;
 
-    
     const field = await this.dataSource
       .createQueryBuilder()
-      .select(['field.id', 'field.name', 'field.assignedAgentId', 'field.currentStage'])
+      .select([
+        'field.id',
+        'field.name',
+        'field.assignedAgentId',
+        'field.currentStage',
+      ])
       .from(Field, 'field')
       .where('field.id = :fieldId', { fieldId })
       .getRawOne();
@@ -142,7 +159,6 @@ export class FieldUpdatesService {
       throw new ForbiddenException('You are not assigned to this field');
     }
 
-    
     const updateResult = await this.dataSource
       .createQueryBuilder()
       .insert()
@@ -159,7 +175,6 @@ export class FieldUpdatesService {
       .returning('*')
       .execute();
 
-    
     await this.dataSource
       .createQueryBuilder()
       .update(Field)
@@ -167,7 +182,6 @@ export class FieldUpdatesService {
       .where('id = :fieldId', { fieldId })
       .execute();
 
-    
     await this.clearRelatedCache(fieldId, agentId);
 
     return {
@@ -176,11 +190,15 @@ export class FieldUpdatesService {
     };
   }
 
-  
   async bulkUpdateStages(bulkUpdateDto: BulkUpdateDto, adminId: string) {
     const { fieldIds, newStage, notes } = bulkUpdateDto;
 
-    const stageOrder = [FieldStage.PLANTED, FieldStage.GROWING, FieldStage.READY, FieldStage.HARVESTED];
+    const stageOrder = [
+      FieldStage.PLANTED,
+      FieldStage.GROWING,
+      FieldStage.READY,
+      FieldStage.HARVESTED,
+    ];
     const newIndex = stageOrder.indexOf(newStage);
 
     const results = {
@@ -208,7 +226,6 @@ export class FieldUpdatesService {
           continue;
         }
 
-        
         await this.dataSource
           .createQueryBuilder()
           .update(Field)
@@ -219,7 +236,6 @@ export class FieldUpdatesService {
           .where('id = :fieldId', { fieldId })
           .execute();
 
-        
         await this.dataSource
           .createQueryBuilder()
           .insert()
@@ -229,13 +245,15 @@ export class FieldUpdatesService {
             agentId: field.assignedAgentId,
             newStage,
             previousStage: field.currentStage,
-            notes: notes || `Bulk update from admin: ${field.currentStage} to ${newStage}`,
+            notes:
+              notes ||
+              `Bulk update from admin: ${field.currentStage} to ${newStage}`,
             updateType: 'stage_change',
           })
           .execute();
 
         results.success.push(fieldId);
-      } catch (error:any) {
+      } catch (error: any) {
         results.failed.push({ id: fieldId, reason: error.message });
       }
     }
@@ -246,9 +264,12 @@ export class FieldUpdatesService {
     };
   }
 
-  
-  async getFieldUpdates(fieldId: string, filters: FilterUpdatesDto, userId: string, userRole: UserRole) {
-   
+  async getFieldUpdates(
+    fieldId: string,
+    filters: FilterUpdatesDto,
+    userId: string,
+    userRole: UserRole,
+  ) {
     const field = await this.dataSource
       .createQueryBuilder()
       .select(['field.id', 'field.assignedAgentId'])
@@ -285,10 +306,14 @@ export class FieldUpdatesService {
       .where('update.fieldId = :fieldId', { fieldId });
 
     if (startDate) {
-      query = query.andWhere('update.createdAt >= :startDate', { startDate: new Date(startDate) });
+      query = query.andWhere('update.createdAt >= :startDate', {
+        startDate: new Date(startDate),
+      });
     }
     if (endDate) {
-      query = query.andWhere('update.createdAt <= :endDate', { endDate: new Date(endDate) });
+      query = query.andWhere('update.createdAt <= :endDate', {
+        endDate: new Date(endDate),
+      });
     }
 
     const total = await query.getCount();
@@ -309,7 +334,6 @@ export class FieldUpdatesService {
       },
     };
   }
-
 
   async getMyUpdates(agentId: string, filters: FilterUpdatesDto) {
     const { page = 1, limit = 20, startDate, endDate } = filters;
@@ -334,10 +358,14 @@ export class FieldUpdatesService {
       .where('update.agentId = :agentId', { agentId });
 
     if (startDate) {
-      query = query.andWhere('update.createdAt >= :startDate', { startDate: new Date(startDate) });
+      query = query.andWhere('update.createdAt >= :startDate', {
+        startDate: new Date(startDate),
+      });
     }
     if (endDate) {
-      query = query.andWhere('update.createdAt <= :endDate', { endDate: new Date(endDate) });
+      query = query.andWhere('update.createdAt <= :endDate', {
+        endDate: new Date(endDate),
+      });
     }
 
     const total = await query.getCount();
@@ -359,9 +387,16 @@ export class FieldUpdatesService {
     };
   }
 
-  
   async getAllUpdates(filters: FilterUpdatesDto) {
-    const { page = 1, limit = 20, fieldId, agentId, stage, startDate, endDate } = filters;
+    const {
+      page = 1,
+      limit = 20,
+      fieldId,
+      agentId,
+      stage,
+      startDate,
+      endDate,
+    } = filters;
     const skip = (page - 1) * limit;
 
     let query = this.dataSource
@@ -394,10 +429,14 @@ export class FieldUpdatesService {
       query = query.andWhere('update.newStage = :stage', { stage });
     }
     if (startDate) {
-      query = query.andWhere('update.createdAt >= :startDate', { startDate: new Date(startDate) });
+      query = query.andWhere('update.createdAt >= :startDate', {
+        startDate: new Date(startDate),
+      });
     }
     if (endDate) {
-      query = query.andWhere('update.createdAt <= :endDate', { endDate: new Date(endDate) });
+      query = query.andWhere('update.createdAt <= :endDate', {
+        endDate: new Date(endDate),
+      });
     }
 
     const total = await query.getCount();
@@ -419,7 +458,6 @@ export class FieldUpdatesService {
     };
   }
 
-
   async getUpdateStatistics(fieldId?: string) {
     let query = this.dataSource
       .createQueryBuilder()
@@ -440,7 +478,6 @@ export class FieldUpdatesService {
       .limit(30)
       .getRawMany();
 
-   
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -452,13 +489,14 @@ export class FieldUpdatesService {
       .getRawOne();
 
     return {
-      totalUpdates: parseInt(stats.reduce((sum, s) => sum + parseInt(s.totalUpdates), 0)),
+      totalUpdates: parseInt(
+        stats.reduce((sum, s) => sum + parseInt(s.totalUpdates), 0),
+      ),
       todayUpdates: parseInt(todayCount.count),
       breakdown: stats,
     };
   }
 
- 
   async deleteUpdate(updateId: string, adminId: string) {
     const result = await this.dataSource
       .createQueryBuilder()
@@ -474,9 +512,10 @@ export class FieldUpdatesService {
     return { message: 'Update deleted successfully' };
   }
 
-
-
-  private calculateStatus(currentStage: FieldStage, daysSincePlanting: number): FieldStatus {
+  private calculateStatus(
+    currentStage: FieldStage,
+    daysSincePlanting: number,
+  ): FieldStatus {
     if (currentStage === FieldStage.HARVESTED) {
       return FieldStatus.COMPLETED;
     }
@@ -495,15 +534,16 @@ export class FieldUpdatesService {
   }
 
   private getDaysDifference(startDate: Date, endDate: Date): number {
-    return Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
+    return Math.floor(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24),
+    );
   }
 
   private async clearRelatedCache(fieldId: string, agentId: string) {
-    
     await this.cacheService.delPattern(`field_${fieldId}`);
-   
+
     await this.cacheService.delPattern(`agent_dashboard_${agentId}`);
-   
+
     await this.cacheService.delPattern('admin_dashboard_data');
   }
 }

@@ -15,7 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 @Index(['refresh_token'])
 @Index(['user_id'])
 @Index(['expires_at'])
-@Index(['user_id', 'is_revoked']) 
+@Index(['user_id', 'is_revoked'])
 export class Session {
   @PrimaryColumn('uuid')
   id!: string;
@@ -41,7 +41,6 @@ export class Session {
   @Column({ type: 'boolean', default: false })
   is_revoked!: boolean;
 
-  
   @ManyToOne(() => User, (user) => user.sessions, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user!: User;
